@@ -9,6 +9,7 @@ const activeBookingStatuses = [
   "pending",
 ];
 
+// Find Active Booking
 export const findActiveBooking = async (customerId, serviceId) => {
   return getDatabase()
     .collection("bookings")
@@ -22,6 +23,55 @@ export const findActiveBooking = async (customerId, serviceId) => {
     );
 };
 
+// Bookings By Customer ID
+export const getBookingsByCustomerId = async (customerId) => {
+  const database = getDatabase();
+  const bookings = await database
+    .collection("bookings")
+    .find({ customerId })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return Promise.all(
+    bookings.map(async (booking) => {
+      const serviceId =
+        booking.serviceId instanceof ObjectId
+          ? booking.serviceId
+          : typeof booking.serviceId === "string" &&
+              ObjectId.isValid(booking.serviceId)
+            ? new ObjectId(booking.serviceId)
+            : null;
+
+      const service = serviceId
+        ? await database.collection("services").findOne(
+            { _id: serviceId },
+            {
+              projection: {
+                title: 1,
+                serviceImage: 1,
+                technicianName: 1,
+                basePrice: 1,
+              },
+            },
+          )
+        : null;
+
+      return { ...booking, service };
+    }),
+  );
+};
+
+// Booking Delete By ID
+export const deleteBookingById = async (bookingId, customerId) => {
+  return getDatabase()
+    .collection("bookings")
+    .deleteOne({
+      _id: new ObjectId(bookingId),
+      customerId,
+    });
+};
+
+// Booking Add
 export const addBooking = async (bookingData) => {
   const database = getDatabase();
   const serviceObjectId = new ObjectId(bookingData.serviceId);
