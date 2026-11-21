@@ -4,12 +4,20 @@ import {
   getServiceDetails,
   updateServiceById,
   deleteServiceById,
+  toggleServiceById,
 } from "../services/service.service.js";
+
+const isValidServiceId = (id) => /^[a-f\d]{24}$/i.test(id);
 
 // Add New Service
 export const createService = async (req, res) => {
   try {
-    const serviceData = req.body;
+    const serviceData = {
+      ...(req.body || {}),
+      technicianId: req.user.id,
+      technicianName: req.user.name,
+      isActive: true,
+    };
     const result = await addServices(serviceData);
 
     res.status(201).json({
@@ -66,8 +74,15 @@ export const getServiceDetail = async (req, res) => {
 export const updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
-    const result = await updateServiceById(id, updateData);
+    if (!isValidServiceId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid service ID is required",
+      });
+    }
+
+    const updateData = req.body || {};
+    const result = await updateServiceById(id, req.user.id, updateData);
 
     if (result.matchedCount === 0) {
       return res.status(404).json({ success: false, message: "Service not found" });
@@ -91,7 +106,14 @@ export const updateService = async (req, res) => {
 export const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await deleteServiceById(id);
+    if (!isValidServiceId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid service ID is required",
+      });
+    }
+
+    const result = await deleteServiceById(id, req.user.id);
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ success: false, message: "Service not found" });
@@ -106,6 +128,36 @@ export const deleteService = async (req, res) => {
       success: false,
       message: "Failed to delete service",
       error: error.message,
+    });
+  }
+};
+
+export const toggleServiceStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidServiceId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid service ID is required",
+      });
+    }
+
+    const service = await toggleServiceById(id, req.user.id);
+
+    if (!service) {
+      return res.status(404).json({ success: false, message: "Service not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Service turned ${service.isActive ? "on" : "off"} successfully`,
+      data: service,
+    });
+  } catch (error) {
+    console.error("Toggle Service Status Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to toggle service status",
     });
   }
 };

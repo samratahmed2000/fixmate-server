@@ -5,15 +5,18 @@ import {
   getServiceDetail,
   updateService,
   deleteService,
+  toggleServiceStatus,
 } from "../controllers/service.controller.js";
+import { requireTechnician } from "../middleware/requireTechnician.js";
 
 const router = express.Router();
 
-router.post("/", createService);
+router.post("/", requireTechnician, createService);
 router.get("/", getServices);
 router.get("/:id", getServiceDetail);
-router.put("/:id", updateService);
-router.patch("/:id", updateService);
-router.delete("/:id", deleteService);
+router.put("/:id", requireTechnician, updateService);
+router.patch("/:id/toggle", requireTechnician, toggleServiceStatus);
+router.patch("/:id", requireTechnician, updateService);
+router.delete("/:id", requireTechnician, deleteService);
 
 export default router;
