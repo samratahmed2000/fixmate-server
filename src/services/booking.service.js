@@ -61,14 +61,24 @@ export const getBookingsByCustomerId = async (customerId) => {
   );
 };
 
-// Booking Delete By ID
-export const deleteBookingById = async (bookingId, customerId) => {
+// Cancel Booking By ID
+export const cancelBookingById = async (bookingId, customerId) => {
   return getDatabase()
     .collection("bookings")
-    .deleteOne({
-      _id: new ObjectId(bookingId),
-      customerId,
-    });
+    .updateOne(
+      {
+        _id: new ObjectId(bookingId),
+        customerId,
+        status: { $in: ["requested", "pending"] },
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+    );
 };
 
 // Booking Add

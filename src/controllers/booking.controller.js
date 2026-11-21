@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import {
   addBooking,
-  deleteBookingById,
+  cancelBookingById,
   findActiveBooking,
   getBookingsByCustomerId,
 } from "../services/booking.service.js";
@@ -126,8 +126,8 @@ export const getMyBookings = async (req, res) => {
   }
 };
 
-// Delete Customer Booking
-export const deleteMyBooking = async (req, res) => {
+// Cancel Customer Booking
+export const cancelMyBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -138,18 +138,18 @@ export const deleteMyBooking = async (req, res) => {
       });
     }
 
-    const result = await deleteBookingById(id, req.user.id);
+    const result = await cancelBookingById(id, req.user.id);
 
-    if (result.deletedCount === 0) {
+    if (result.modifiedCount === 0) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found",
+        message: "Booking not found or can no longer be cancelled",
       });
     }
 
     return res.json({
       success: true,
-      message: "Booking deleted successfully",
+      message: "Booking cancelled successfully",
     });
   } catch (error) {
     console.error("Delete Booking Error:", error);
