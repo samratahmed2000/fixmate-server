@@ -1,10 +1,11 @@
 import { MongoClient } from "mongodb";
 
+let client;
 let database;
 
 export const connectToMongoDB = async () => {
   try {
-    const client = new MongoClient(process.env.MONGODB_URI);
+    client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
 
     database = client.db("fixMate");
@@ -24,4 +25,12 @@ export const getDatabase = () => {
   }
 
   return database;
+};
+
+export const getMongoClient = () => {
+  if (!client) {
+    throw new Error("MongoDB client is not connected");
+  }
+
+  return client;
 };

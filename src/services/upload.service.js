@@ -1,3 +1,4 @@
+// Upload Image
 export const uploadImageToImgBB = async (fileBuffer) => {
   const apiKey = process.env.IMGBB_API_KEY;
 
