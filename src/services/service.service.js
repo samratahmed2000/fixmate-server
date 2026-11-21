@@ -26,3 +26,32 @@ export const getServiceDetails = async (id) => {
   const result = await serviceCollection.findOne(query);
   return result;
 };
+
+// Update Service
+export const updateServiceById = async (id, updateData) => {
+  const serviceCollection = getDatabase().collection("services");
+
+  if (!ObjectId.isValid(id)) {
+    throw new Error("Invalid Service ID format");
+  }
+
+  const { _id, ...safeUpdateData } = updateData;
+
+  const query = { _id: new ObjectId(id) };
+  const updateDoc = { $set: safeUpdateData };
+  const result = await serviceCollection.updateOne(query, updateDoc);
+  return result;
+};
+
+// Delete Service
+export const deleteServiceById = async (id) => {
+  const serviceCollection = getDatabase().collection("services");
+
+  if (!ObjectId.isValid(id)) {
+    throw new Error("Invalid Service ID format");
+  }
+
+  const query = { _id: new ObjectId(id) };
+  const result = await serviceCollection.deleteOne(query);
+  return result;
+};
