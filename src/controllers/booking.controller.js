@@ -2,8 +2,11 @@ import { ObjectId } from "mongodb";
 import {
   addBooking,
   cancelBookingById,
+  collectBookingPaymentByTechnician,
   findActiveBooking,
   getBookingsByCustomerId,
+  getBookingsByTechnicianId,
+  updateBookingStatusByTechnician,
 } from "../services/booking.service.js";
 
 // Booking Create
@@ -52,6 +55,13 @@ export const createBooking = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Service not found",
+      });
+    }
+
+    if (result.error === "service-unavailable") {
+      return res.status(409).json({
+        success: false,
+        message: "This service is currently unavailable",
       });
     }
 
@@ -122,6 +132,132 @@ export const getMyBookings = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch bookings",
+    });
+  }
+};
+
+// Technician Requests
+export const getTechnicianRequests = async (req, res) => {
+  try {
+    const bookings = await getBookingsByTechnicianId(req.user.id);
+
+    return res.json({
+      success: true,
+      message: "Technician requests fetched successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("Get Technician Requests Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch technician requests",
+    });
+  }
+};
+
+// Technician Booking Status
+export const updateTechnicianBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {};
+    const validStatuses = ["accepted", "rejected", "in-progress", "completed"];
+
+    if (!/^[a-f\d]{24}$/i.test(id) || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid booking ID and status are required",
+      });
+    }
+
+    const result = await updateBookingStatusByTechnician(
+      id,
+      req.user.id,
+      status,
+    );
+
+    if (result.error === "booking-not-found") {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (result.error === "invalid-transition") {
+      return res.status(409).json({
+        success: false,
+        message: "This booking can no longer be moved to that status",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Booking status updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Update Technician Booking Status Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update booking status",
+    });
+  }
+};
+
+// Technician Payment Collection
+export const collectTechnicianBookingPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { finalAmount } = req.body || {};
+
+    if (
+      !/^[a-f\d]{24}$/i.test(id) ||
+      typeof finalAmount !== "number" ||
+      !Number.isFinite(finalAmount) ||
+      finalAmount < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid booking ID and final amount are required",
+      });
+    }
+
+    const result = await collectBookingPaymentByTechnician(
+      id,
+      req.user.id,
+      finalAmount,
+    );
+
+    if (result.error === "booking-not-found") {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (result.error === "booking-not-completed") {
+      return res.status(409).json({
+        success: false,
+        message: "Payment can only be collected for completed bookings",
+      });
+    }
+
+    if (result.error === "already-paid") {
+      return res.status(409).json({
+        success: false,
+        message: "Payment has already been recorded",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Payment recorded successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Collect Technician Booking Payment Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to record payment",
     });
   }
 };
