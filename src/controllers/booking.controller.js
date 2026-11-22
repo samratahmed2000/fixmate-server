@@ -6,8 +6,47 @@ import {
   findActiveBooking,
   getBookingsByCustomerId,
   getBookingsByTechnicianId,
+  getAllBookingsForAdmin,
   updateBookingStatusByTechnician,
 } from "../services/booking.service.js";
+
+const adminBookingStatuses = new Set([
+  "all",
+  "requested",
+  "accepted",
+  "in-progress",
+  "completed",
+  "cancelled",
+  "rejected",
+]);
+
+export const getAllBookingsForAdminController = async (req, res) => {
+  try {
+    const status = req.query.status || "all";
+    if (
+      typeof status !== "string" ||
+      !adminBookingStatuses.has(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking status filter",
+      });
+    }
+
+    const bookings = await getAllBookingsForAdmin(status);
+    return res.json({
+      success: true,
+      message: "All bookings fetched successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("Get Admin Bookings Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch bookings",
+    });
+  }
+};
 
 // Booking Create
 export const createBooking = async (req, res) => {

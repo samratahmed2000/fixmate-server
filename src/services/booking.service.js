@@ -112,6 +112,105 @@ export const getBookingsByTechnicianId = async (technicianId) => {
   });
 };
 
+const adminBookingStatusAliases = {
+  requested: ["requested", "pending"],
+  accepted: ["accepted"],
+  "in-progress": ["in-progress", "in_progress", "on-progress", "on_progress"],
+  completed: ["completed"],
+  cancelled: ["cancelled", "canceled"],
+  rejected: ["rejected"],
+};
+
+const normalizeAdminBookingStatus = (status) => {
+  const value = String(status || "requested")
+    .toLowerCase()
+    .replaceAll("_", "-");
+  if (value === "pending") return "requested";
+  if (value === "on-progress") return "in-progress";
+  if (value === "canceled") return "cancelled";
+  return value;
+};
+
+export const getAllBookingsForAdmin = async (status = "all") => {
+  const database = getDatabase();
+  const bookingQuery = {};
+
+  if (status !== "all") {
+    const aliases = adminBookingStatusAliases[status];
+    if (!aliases) {
+      throw new Error("Invalid booking status filter");
+    }
+    bookingQuery.status = {
+      $regex: `^(?:${aliases.join("|")})$`,
+      $options: "i",
+    };
+  }
+
+  const bookings = await database
+    .collection("bookings")
+    .find(bookingQuery)
+    .sort({ createdAt: -1, _id: -1 })
+    .toArray();
+
+  const serviceIds = [
+    ...new Map(
+      bookings.flatMap((booking) => {
+        const id =
+          booking.serviceId instanceof ObjectId
+            ? booking.serviceId
+            : typeof booking.serviceId === "string" &&
+                ObjectId.isValid(booking.serviceId)
+              ? new ObjectId(booking.serviceId)
+              : null;
+        return id ? [[id.toString(), id]] : [];
+      }),
+    ).values(),
+  ];
+  const services = serviceIds.length
+    ? await database
+        .collection("services")
+        .find(
+          { _id: { $in: serviceIds } },
+          {
+            projection: {
+              title: 1,
+              technicianName: 1,
+              basePrice: 1,
+            },
+          },
+        )
+        .toArray()
+    : [];
+  const serviceById = new Map(
+    services.map((service) => [service._id.toString(), service]),
+  );
+
+  return bookings.map((booking) => {
+    const serviceId = booking.serviceId?.toString() || "";
+    const service = serviceById.get(serviceId);
+    const bookingDate =
+      booking.bookingDate instanceof Date
+        ? booking.bookingDate.toISOString()
+        : String(booking.bookingDate || "");
+
+    return {
+      _id: booking._id.toString(),
+      service: service ? { title: service.title || "" } : null,
+      customerName: booking.customerName || "",
+      technicianName:
+        service?.technicianName || booking.technicianName || "",
+      bookingDate,
+      status: normalizeAdminBookingStatus(booking.status),
+      paymentStatus: booking.paymentStatus || "unpaid",
+      amount:
+        booking.finalAmount ??
+        booking.basePrice ??
+        service?.basePrice ??
+        null,
+    };
+  });
+};
+
 const getBookingOwnedByTechnician = async (bookingId, technicianId) => {
   if (!ObjectId.isValid(bookingId)) {
     return null;

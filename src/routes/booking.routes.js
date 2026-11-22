@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createBooking,
+  getAllBookingsForAdminController,
   cancelMyBooking,
   collectTechnicianBookingPayment,
   getTechnicianRequests,
@@ -10,9 +11,11 @@ import {
 } from "../controllers/booking.controller.js";
 import { requireCustomer } from "../middleware/requireCustomer.js";
 import { requireTechnician } from "../middleware/requireTechnician.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 
 const router = express.Router();
 
+router.get("/admin", requireAdmin, getAllBookingsForAdminController);
 router.get("/technician", requireTechnician, getTechnicianRequests);
 router.patch(
   "/:id/status",
