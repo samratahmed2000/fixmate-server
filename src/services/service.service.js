@@ -12,10 +12,13 @@ export const addServices = async (serviceData) => {
 export const getAllServices = async (filters = {}) => {
   const database = getDatabase();
   const serviceCollection = database.collection("services");
-  const match = {
-    isActive: { $ne: false },
-    availability: { $ne: "Not-Active" },
-  };
+  const match = {};
+
+  if (filters.includePending !== "true") {
+    match.isActive = { $ne: false };
+    match.availability = { $ne: "Not-Active" };
+    match.approvalStatus = { $in: ["Approved", "approved"] };
+  }
 
   const search = typeof filters.search === "string" ? filters.search.trim() : "";
   if (search) {
@@ -119,6 +122,7 @@ export const getFeaturedServices = async (limit = 6) => {
         $match: {
           isActive: { $ne: false },
           availability: { $ne: "Not-Active" },
+          approvalStatus: { $in: ["Approved", "approved"] },
         },
       },
       { $sort: { createdAt: -1, _id: -1 } },
@@ -139,7 +143,6 @@ export const updateServiceById = async (id, technicianId, updateData) => {
   delete safeUpdateData._id;
   delete safeUpdateData.technicianId;
   delete safeUpdateData.technicianName;
-  delete safeUpdateData.isActive;
 
   const query = { _id: new ObjectId(id), technicianId };
   const updateDoc = { $set: safeUpdateData };
@@ -176,4 +179,26 @@ export const toggleServiceById = async (id, technicianId) => {
   });
 
   return { ...service, isActive, availability };
+};
+
+export const updateServiceApprovalById = async (id, approvalStatus) => {
+  const serviceCollection = getDatabase().collection("services");
+  if (!ObjectId.isValid(id)) {
+    throw new Error("Invalid Service ID format");
+  }
+
+  const isApproved = approvalStatus === "Approved";
+  const result = await serviceCollection.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        approvalStatus,
+        isActive: isApproved,
+        availability: isApproved ? "Active" : "Not-Active",
+        approvedAt: isApproved ? new Date() : null,
+        rejectedAt: isApproved ? null : new Date(),
+      },
+    },
+  );
+  return result;
 };

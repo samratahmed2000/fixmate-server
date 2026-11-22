@@ -6,6 +6,7 @@ import {
   updateServiceById,
   deleteServiceById,
   toggleServiceById,
+  updateServiceApprovalById,
 } from "../services/service.service.js";
 
 const isValidServiceId = (id) => /^[a-f\d]{24}$/i.test(id);
@@ -17,7 +18,9 @@ export const createService = async (req, res) => {
       ...(req.body || {}),
       technicianId: req.user.id,
       technicianName: req.user.name,
-      isActive: true,
+      isActive: false,
+      availability: "Not-Active",
+      approvalStatus: "Pending",
       createdAt: new Date(),
     };
     const result = await addServices(serviceData);
@@ -44,6 +47,7 @@ export const getServices = async (req, res) => {
       mode: req.query.mode,
       sort: req.query.sort,
       limit: req.query.limit,
+      includePending: req.query.includePending,
     });
 
     res.status(200).json({
@@ -109,7 +113,13 @@ export const updateService = async (req, res) => {
       });
     }
 
-    const updateData = req.body || {};
+    const updateData = {
+      ...(req.body || {}),
+      approvalStatus: "Pending",
+      isActive: false,
+      availability: "Not-Active",
+      updatedAt: new Date(),
+    };
     const result = await updateServiceById(id, req.user.id, updateData);
 
     if (result.matchedCount === 0) {
@@ -156,6 +166,40 @@ export const deleteService = async (req, res) => {
       success: false,
       message: "Failed to delete service",
       error: error.message,
+    });
+  }
+};
+
+export const updateServiceApproval = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const status =
+      req.body?.approvalStatus === "Rejected" ? "Rejected" : "Approved";
+
+    if (!isValidServiceId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid service ID is required",
+      });
+    }
+
+    const result = await updateServiceApprovalById(id, status);
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Service not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Service ${status.toLowerCase()} successfully`,
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update service approval",
     });
   }
 };
