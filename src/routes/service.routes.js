@@ -3,6 +3,7 @@ import {
   createService,
   getServices,
   getServiceDetail,
+  getFeaturedServices,
   updateService,
   deleteService,
   toggleServiceStatus,
@@ -13,6 +14,7 @@ const router = express.Router();
 
 router.post("/", requireTechnician, createService);
 router.get("/", getServices);
+router.get("/featured", getFeaturedServices);
 router.get("/:id", getServiceDetail);
 router.put("/:id", requireTechnician, updateService);
 router.patch("/:id/toggle", requireTechnician, toggleServiceStatus);

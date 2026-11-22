@@ -90,6 +90,12 @@ export const getAllServices = async (filters = {}) => {
     pipeline.push({ $sort: { _id: -1 } });
   }
 
+  const limit =
+    typeof filters.limit === "string" ? Number.parseInt(filters.limit, 10) : 0;
+  if (Number.isInteger(limit) && limit > 0) {
+    pipeline.push({ $limit: Math.min(limit, 50) });
+  }
+
   return serviceCollection.aggregate(pipeline).toArray();
 };
 
@@ -103,6 +109,22 @@ export const getServiceDetails = async (id) => {
   const query = { _id: new ObjectId(id) };
   const result = await serviceCollection.findOne(query);
   return result;
+};
+
+export const getFeaturedServices = async (limit = 6) => {
+  const serviceCollection = getDatabase().collection("services");
+  return serviceCollection
+    .aggregate([
+      {
+        $match: {
+          isActive: { $ne: false },
+          availability: { $ne: "Not-Active" },
+        },
+      },
+      { $sort: { createdAt: -1, _id: -1 } },
+      { $limit: Math.min(Math.max(limit, 1), 50) },
+    ])
+    .toArray();
 };
 
 // Update Service

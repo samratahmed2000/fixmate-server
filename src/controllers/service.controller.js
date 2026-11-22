@@ -2,6 +2,7 @@ import {
   addServices,
   getAllServices,
   getServiceDetails,
+  getFeaturedServices as getFeaturedServicesFromDatabase,
   updateServiceById,
   deleteServiceById,
   toggleServiceById,
@@ -17,6 +18,7 @@ export const createService = async (req, res) => {
       technicianId: req.user.id,
       technicianName: req.user.name,
       isActive: true,
+      createdAt: new Date(),
     };
     const result = await addServices(serviceData);
 
@@ -41,6 +43,7 @@ export const getServices = async (req, res) => {
       category: req.query.category,
       mode: req.query.mode,
       sort: req.query.sort,
+      limit: req.query.limit,
     });
 
     res.status(200).json({
@@ -52,6 +55,26 @@ export const getServices = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch services",
+    });
+  }
+};
+
+export const getFeaturedServices = async (req, res) => {
+  try {
+    const limit = Number.parseInt(req.query.limit || "6", 10);
+    const services = await getFeaturedServicesFromDatabase(
+      Number.isInteger(limit) ? limit : 6,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Featured services fetched successfully",
+      data: services,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch featured services",
     });
   }
 };
