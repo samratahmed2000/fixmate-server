@@ -9,10 +9,88 @@ export const addServices = async (serviceData) => {
 };
 
 // Get All Services
-export const getAllServices = async () => {
-  const serviceCollection = getDatabase().collection("services");
-  const services = await serviceCollection.find().toArray();
-  return services;
+export const getAllServices = async (filters = {}) => {
+  const database = getDatabase();
+  const serviceCollection = database.collection("services");
+  const match = {
+    isActive: { $ne: false },
+    availability: { $ne: "Not-Active" },
+  };
+
+  const search = typeof filters.search === "string" ? filters.search.trim() : "";
+  if (search) {
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    match.$or = [
+      { title: { $regex: escapedSearch, $options: "i" } },
+      { category: { $regex: escapedSearch, $options: "i" } },
+    ];
+  }
+
+  const categoryValues =
+    typeof filters.category === "string"
+      ? filters.category
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+
+  if (categoryValues.length > 0) {
+    const categoryCollection = database.collection("categories");
+    const categoryDocuments = await categoryCollection
+      .find({
+        $or: [
+          { slug: { $in: categoryValues } },
+          { title: { $in: categoryValues } },
+        ],
+      })
+      .toArray();
+
+    const categoryTitles = [
+      ...categoryDocuments.map((category) => category.title),
+      ...categoryValues,
+    ].filter(Boolean);
+    match.category = { $in: categoryTitles };
+  }
+
+  const modeValues =
+    typeof filters.mode === "string"
+      ? filters.mode
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+  if (modeValues.length > 0) {
+    match.serviceMode = { $in: modeValues };
+  }
+
+  const pipeline = [{ $match: match }];
+
+  if (filters.sort === "price-asc" || filters.sort === "price-desc") {
+    pipeline.push({
+      $addFields: {
+        numericPrice: {
+          $convert: {
+            input: "$basePrice",
+            to: "double",
+            onError: 0,
+            onNull: 0,
+          },
+        },
+      },
+    });
+    pipeline.push({
+      $sort: {
+        numericPrice: filters.sort === "price-asc" ? 1 : -1,
+        _id: -1,
+      },
+    });
+  } else if (filters.sort === "newest") {
+    pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
+  } else {
+    pipeline.push({ $sort: { _id: -1 } });
+  }
+
+  return serviceCollection.aggregate(pipeline).toArray();
 };
 
 // Service Details

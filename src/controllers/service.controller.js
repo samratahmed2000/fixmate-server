@@ -36,7 +36,12 @@ export const createService = async (req, res) => {
 // All Services
 export const getServices = async (req, res) => {
   try {
-    const services = await getAllServices();
+    const services = await getAllServices({
+      search: req.query.search,
+      category: req.query.category,
+      mode: req.query.mode,
+      sort: req.query.sort,
+    });
 
     res.status(200).json({
       success: true,
