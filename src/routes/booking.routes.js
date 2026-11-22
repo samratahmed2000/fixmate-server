@@ -3,7 +3,7 @@ import {
   createBooking,
   getAllBookingsForAdminController,
   cancelMyBooking,
-  collectTechnicianBookingPayment,
+  requestTechnicianBookingPayment,
   getTechnicianRequests,
   getMyBookings,
   getBookingStatus,
@@ -25,7 +25,7 @@ router.patch(
 router.patch(
   "/:id/payment",
   requireTechnician,
-  collectTechnicianBookingPayment,
+  requestTechnicianBookingPayment,
 );
 router.get("/my", requireCustomer, getMyBookings);
 router.get("/", requireCustomer, getBookingStatus);

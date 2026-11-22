@@ -51,6 +51,8 @@ export const getBookingsByCustomerId = async (customerId) => {
                 serviceImage: 1,
                 technicianName: 1,
                 basePrice: 1,
+                category: 1,
+                serviceMode: 1,
               },
             },
           )
@@ -106,6 +108,7 @@ export const getBookingsByTechnicianId = async (technicianId) => {
       problemDescription: booking.problemDescription || "",
       status: booking.status || "requested",
       paymentStatus: booking.paymentStatus || "unpaid",
+      paymentRequested: booking.paymentRequested === true,
       finalAmount: booking.finalAmount,
       service: serviceById.get(serviceId) || null,
     };
@@ -289,7 +292,7 @@ export const updateBookingStatusByTechnician = async (
   return { bookingId: booking._id.toString(), status: nextStatus };
 };
 
-export const collectBookingPaymentByTechnician = async (
+export const requestBookingPaymentByTechnician = async (
   bookingId,
   technicianId,
   finalAmount,
@@ -306,6 +309,9 @@ export const collectBookingPaymentByTechnician = async (
   if (String(booking.paymentStatus || "").toLowerCase() === "paid") {
     return { error: "already-paid" };
   }
+  if (booking.paymentRequested === true) {
+    return { error: "already-requested" };
+  }
 
   const paymentStatusFilter =
     booking.paymentStatus === undefined
@@ -317,25 +323,28 @@ export const collectBookingPaymentByTechnician = async (
       {
         _id: booking._id,
         status: booking.status,
+        paymentRequested: { $ne: true },
         ...paymentStatusFilter,
       },
       {
         $set: {
           finalAmount,
-          paymentStatus: "paid",
+          paymentRequested: true,
+          paymentRequestedAt: new Date(),
           updatedAt: new Date(),
         },
       },
     );
 
   if (result.modifiedCount === 0) {
-    return { error: "already-paid" };
+    return { error: "already-requested" };
   }
 
   return {
     bookingId: booking._id.toString(),
     finalAmount,
-    paymentStatus: "paid",
+    paymentStatus: booking.paymentStatus || "unpaid",
+    paymentRequested: true,
   };
 };
 

@@ -175,10 +175,19 @@ export const toggleServiceById = async (id, technicianId) => {
   const isActive = service.isActive === false;
   const availability = isActive ? "Active" : "Not-Active";
   await serviceCollection.updateOne(query, {
-    $set: { isActive, availability },
+    $set: {
+      isActive,
+      availability,
+      availabilityManuallySet: true,
+    },
   });
 
-  return { ...service, isActive, availability };
+  return {
+    ...service,
+    isActive,
+    availability,
+    availabilityManuallySet: true,
+  };
 };
 
 export const updateServiceApprovalById = async (id, approvalStatus) => {
@@ -187,18 +196,21 @@ export const updateServiceApprovalById = async (id, approvalStatus) => {
     throw new Error("Invalid Service ID format");
   }
 
+  const query = { _id: new ObjectId(id) };
   const isApproved = approvalStatus === "Approved";
-  const result = await serviceCollection.updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        approvalStatus,
-        isActive: isApproved,
-        availability: isApproved ? "Active" : "Not-Active",
-        approvedAt: isApproved ? new Date() : null,
-        rejectedAt: isApproved ? null : new Date(),
-      },
+  const result = await serviceCollection.updateOne(query, {
+    $set: {
+      approvalStatus,
+      approvedAt: isApproved ? new Date() : null,
+      rejectedAt: isApproved ? null : new Date(),
     },
-  );
+  });
+  if (isApproved && result.matchedCount > 0) {
+    await serviceCollection.updateOne(
+      { ...query, availabilityManuallySet: { $ne: true } },
+      { $set: { isActive: true, availability: "Active" } },
+    );
+  }
+
   return result;
 };

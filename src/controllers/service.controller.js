@@ -18,8 +18,8 @@ export const createService = async (req, res) => {
       ...(req.body || {}),
       technicianId: req.user.id,
       technicianName: req.user.name,
-      isActive: false,
-      availability: "Not-Active",
+      isActive: true,
+      availability: "Active",
       approvalStatus: "Pending",
       createdAt: new Date(),
     };
@@ -116,8 +116,6 @@ export const updateService = async (req, res) => {
     const updateData = {
       ...(req.body || {}),
       approvalStatus: "Pending",
-      isActive: false,
-      availability: "Not-Active",
       updatedAt: new Date(),
     };
     const result = await updateServiceById(id, req.user.id, updateData);

@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import {
   addBooking,
   cancelBookingById,
-  collectBookingPaymentByTechnician,
+  requestBookingPaymentByTechnician,
   findActiveBooking,
   getBookingsByCustomerId,
   getBookingsByTechnicianId,
@@ -242,8 +242,8 @@ export const updateTechnicianBookingStatus = async (req, res) => {
   }
 };
 
-// Technician Payment Collection
-export const collectTechnicianBookingPayment = async (req, res) => {
+// Technician Payment Request
+export const requestTechnicianBookingPayment = async (req, res) => {
   try {
     const { id } = req.params;
     const { finalAmount } = req.body || {};
@@ -252,7 +252,7 @@ export const collectTechnicianBookingPayment = async (req, res) => {
       !/^[a-f\d]{24}$/i.test(id) ||
       typeof finalAmount !== "number" ||
       !Number.isFinite(finalAmount) ||
-      finalAmount < 0
+      finalAmount <= 0
     ) {
       return res.status(400).json({
         success: false,
@@ -260,7 +260,7 @@ export const collectTechnicianBookingPayment = async (req, res) => {
       });
     }
 
-    const result = await collectBookingPaymentByTechnician(
+    const result = await requestBookingPaymentByTechnician(
       id,
       req.user.id,
       finalAmount,
@@ -276,7 +276,7 @@ export const collectTechnicianBookingPayment = async (req, res) => {
     if (result.error === "booking-not-completed") {
       return res.status(409).json({
         success: false,
-        message: "Payment can only be collected for completed bookings",
+        message: "Payment can only be requested for completed bookings",
       });
     }
 
@@ -286,17 +286,23 @@ export const collectTechnicianBookingPayment = async (req, res) => {
         message: "Payment has already been recorded",
       });
     }
+    if (result.error === "already-requested") {
+      return res.status(409).json({
+        success: false,
+        message: "Payment has already been requested",
+      });
+    }
 
     return res.json({
       success: true,
-      message: "Payment recorded successfully",
+      message: "Payment request sent successfully",
       data: result,
     });
   } catch (error) {
-    console.error("Collect Technician Booking Payment Error:", error);
+    console.error("Request Technician Booking Payment Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to record payment",
+      message: "Failed to send payment request",
     });
   }
 };
