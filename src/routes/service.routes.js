@@ -9,19 +9,26 @@ import {
   toggleServiceStatus,
   updateServiceApproval,
 } from "../controllers/service.controller.js";
-import { requireTechnician } from "../middleware/requireTechnician.js";
-import { requireAdmin } from "../middleware/requireAdmin.js";
+import {
+  verifyAdmin,
+  verifyTechnician,
+} from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-router.post("/", requireTechnician, createService);
-router.get("/", getServices);
+const verifyTechnicianForPendingServices = (req, res, next) =>
+  req.query.includePending === "true"
+    ? verifyTechnician(req, res, next)
+    : next();
+
+router.post("/", verifyTechnician, createService);
+router.get("/", verifyTechnicianForPendingServices, getServices);
 router.get("/featured", getFeaturedServices);
 router.get("/:id", getServiceDetail);
-router.put("/:id", requireTechnician, updateService);
-router.patch("/:id/toggle", requireTechnician, toggleServiceStatus);
-router.patch("/:id/approval", requireAdmin, updateServiceApproval);
-router.patch("/:id", requireTechnician, updateService);
-router.delete("/:id", requireTechnician, deleteService);
+router.put("/:id", verifyTechnician, updateService);
+router.patch("/:id/toggle", verifyTechnician, toggleServiceStatus);
+router.patch("/:id/approval", verifyAdmin, updateServiceApproval);
+router.patch("/:id", verifyTechnician, updateService);
+router.delete("/:id", verifyTechnician, deleteService);
 
 export default router;

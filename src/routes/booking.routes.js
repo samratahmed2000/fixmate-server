@@ -9,27 +9,29 @@ import {
   getBookingStatus,
   updateTechnicianBookingStatus,
 } from "../controllers/booking.controller.js";
-import { requireCustomer } from "../middleware/requireCustomer.js";
-import { requireTechnician } from "../middleware/requireTechnician.js";
-import { requireAdmin } from "../middleware/requireAdmin.js";
+import {
+  verifyAdmin,
+  verifyCustomer,
+  verifyTechnician,
+} from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-router.get("/admin", requireAdmin, getAllBookingsForAdminController);
-router.get("/technician", requireTechnician, getTechnicianRequests);
+router.get("/admin", verifyAdmin, getAllBookingsForAdminController);
+router.get("/technician", verifyTechnician, getTechnicianRequests);
 router.patch(
   "/:id/status",
-  requireTechnician,
+  verifyTechnician,
   updateTechnicianBookingStatus,
 );
 router.patch(
   "/:id/payment",
-  requireTechnician,
+  verifyTechnician,
   requestTechnicianBookingPayment,
 );
-router.get("/my", requireCustomer, getMyBookings);
-router.get("/", requireCustomer, getBookingStatus);
-router.post("/", requireCustomer, createBooking);
-router.delete("/:id", requireCustomer, cancelMyBooking);
+router.get("/my", verifyCustomer, getMyBookings);
+router.get("/", verifyCustomer, getBookingStatus);
+router.post("/", verifyCustomer, createBooking);
+router.delete("/:id", verifyCustomer, cancelMyBooking);
 
 export default router;

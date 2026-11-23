@@ -18,6 +18,8 @@ export const getAllServices = async (filters = {}) => {
     match.isActive = { $ne: false };
     match.availability = { $ne: "Not-Active" };
     match.approvalStatus = { $in: ["Approved", "approved"] };
+  } else {
+    match.technicianId = filters.technicianId;
   }
 
   const search = typeof filters.search === "string" ? filters.search.trim() : "";
